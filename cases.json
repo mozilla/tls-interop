@@ -1,0 +1,27 @@
+{
+    "cases" : [
+        {
+            "name" : "Simple-Connect"
+        },
+        {
+            "name" : "Connect-Client-Versions",
+            "client_params" : {
+                "versions" : [ 770, 771, 772]
+            },
+            "server" : {
+                "min_version" : 770,
+                "max_version" : 772
+            }
+        },
+        {
+            "name" : "Connect-Server-Versions",
+            "server_params" : {
+                "versions" : [ 770, 771, 772]
+            },
+            "client" : {
+                "min_version" : 770,
+                "max_version" : 772
+            }
+        }
+    ]
+}

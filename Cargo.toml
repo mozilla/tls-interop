@@ -1,0 +1,13 @@
+[package]
+name = "tls_interop"
+version = "0.1.0"
+authors = ["EKR <ekr@rtfm.com>"]
+
+[features]
+
+[dependencies]
+mio = "0.6"
+rustc-serialize = "0.3"
+log = "0"
+env_logger = "0"
+clap = "~2.19.0"

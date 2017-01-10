@@ -1,0 +1,15 @@
+{
+    "cases" : [
+        {
+            "name" : "Fail",
+            "client" : {
+                "min_version" : 770,
+                "max_version" : 770
+            },
+            "server" : {
+                "min_version" : 771,
+                "max_version" : 771
+            }
+        }
+    ]
+}
