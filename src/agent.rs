@@ -1,6 +1,9 @@
 extern crate mio;
+extern crate mio_extras;
+
 use mio::*;
-use mio::channel::Receiver;
+use mio_extras::channel;
+use mio_extras::channel::Receiver;
 use mio::tcp::{TcpListener, TcpStream};
 use std::process::{Command, ExitStatus};
 use std::thread;
