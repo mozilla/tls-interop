@@ -2,6 +2,7 @@ extern crate clap;
 #[macro_use]
 extern crate log;
 extern crate mio;
+extern crate mio_extras;
 extern crate env_logger;
 extern crate rustc_serialize;
 use clap::{Arg, App};
@@ -26,7 +27,7 @@ const SERVER: Token = mio::Token(1);
 
 fn copy_data(poll: &Poll, from: &mut Agent, to: &mut Agent) {
     let mut buf: [u8; 16384] = [0; 16384];
-    let mut b = &mut buf[..];
+    let b = &mut buf[..];
     let rv = from.socket.read(b);
     let size = rv.unwrap_or_else(|e| {
         debug!("Error {} on {}", e, from.name);
@@ -225,7 +226,7 @@ fn run_test_case_inner(config: &TestConfig,
 }
 
 fn main() {
-    env_logger::init();//.expect("Could not init logging");
+    env_logger::init();
 
     let matches = App::new("TLS interop tests")
         .version("0.0")
