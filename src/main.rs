@@ -225,7 +225,7 @@ fn run_test_case_inner(config: &TestConfig,
 }
 
 fn main() {
-    env_logger::init().expect("Could not init logging");
+    env_logger::init();//.expect("Could not init logging");
 
     let matches = App::new("TLS interop tests")
         .version("0.0")
