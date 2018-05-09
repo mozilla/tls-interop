@@ -34,8 +34,8 @@ impl Agent {
         // IPv6 listener by default, IPv4 fallback.
         let addr = "[::1]:0".parse().unwrap();
         let listener = TcpListener::bind(&addr).or_else(|_| {
-          let addr = "127.0.0.1:0".parse().unwrap();
-          TcpListener::bind(&addr)
+            let addr = "127.0.0.1:0".parse().unwrap();
+            TcpListener::bind(&addr)
         }).unwrap();
 
         // Start the subprocess.
