@@ -22,8 +22,3 @@ tls_interop --client ${NSS_ROOT}/dist/Darwin15.6.0_cc_64_DBG.OBJ/bin/nss_bogo_sh
 ```
 
 To swap client and server, you need to run it twice.
-
-
-
-
-
