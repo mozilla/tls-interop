@@ -9,6 +9,7 @@ use std::process::{Command, ExitStatus};
 use std::thread;
 use test_result::TestResult;
 use config::*;
+use TestConfig;
 
 const SERVER: Token = mio::Token(1);
 const STATUS: Token = mio::Token(2);
@@ -27,21 +28,24 @@ pub struct Agent {
 
 impl Agent {
     pub fn new(name: &str,
-               path: &String,
+               path: &str,
                agent: &Option<TestCaseAgent>,
-               args: Vec<String>)
+               args: Vec<String>,
+               conf: &TestConfig)
                -> Result<Agent, i32> {
-        // IPv6 listener by default, IPv4 fallback.
-        let addr = "[::1]:0".parse().unwrap();
-        let listener = TcpListener::bind(&addr).or_else(|_| {
-            let addr = "127.0.0.1:0".parse().unwrap();
-            TcpListener::bind(&addr)
-        }).unwrap();
+        // IPv6 listener by default, IPv4 fallback, unless IPv4 is forced.
+        let addr6 = "[::1]:0".parse().unwrap();
+        let addr4 = "127.0.0.1:0".parse().unwrap();
+        let listener = match conf.force_ipv4 {
+            false => TcpListener::bind(&addr6).or_else(|_| {
+                TcpListener::bind(&addr4)}).unwrap(),
+            true => TcpListener::bind(&addr4).unwrap(),
+        };
 
         // Start the subprocess.
         let mut command = Command::new(path.to_owned());
         // Process parameters.
-        if let &Some(ref a) = agent {
+        if let Some(ref a) = *agent {
             if let Some(ref min) = a.min_version {
                 command.arg("-min-version");
                 command.arg(min.to_string());
@@ -58,7 +62,7 @@ impl Agent {
         }
 
         // Add specific args.
-        for arg in args.iter() {
+        for arg in &args {
             command.arg(arg);
         }
 
@@ -91,33 +95,29 @@ impl Agent {
 
         poll.poll(&mut events, None).unwrap();
         debug!("Poll finished!");
-        for event in events.iter() {
-            debug!("Event!");
-            match event.token() {
-                SERVER => {
-                    let sock = listener.accept();
 
-                    debug!("Accepted");
-                    return Ok(Agent {
-                        name: name.to_owned(),
-                        path: path.to_owned(),
-                        args: args,
-                        socket: sock.unwrap().0,
-                        child: rxf2,
-                        alive: true,
-                        exit_value: None,
-                    });
-                }
-                STATUS => {
-                    let err = rxf.try_recv().unwrap();
-                    info!("Failed {}", err);
-                    return Err(err);
-                }
-                _ => return Err(-1),
+        match events.iter().next().unwrap().token() {
+            SERVER => {
+                let sock = listener.accept();
+
+                debug!("Accepted");
+                Ok(Agent {
+                    name: name.to_owned(),
+                    path: path.to_owned(),
+                    args: args,
+                    socket: sock.unwrap().0,
+                    child: rxf2,
+                    alive: true,
+                    exit_value: None,
+                })
             }
+            STATUS => {
+                let err = rxf.try_recv().unwrap();
+                info!("Failed {}", err);
+                Err(err)
+            }
+            _ => Err(-1)
         }
-
-        unreachable!()
     }
 
     // Read the status from the subthread.
@@ -132,6 +132,6 @@ impl Agent {
 
         let code = self.child.try_recv().unwrap();
         debug!("Exit status for {} = {}", self.name, code);
-        return TestResult::from_status(code);
+        TestResult::from_status(code)
     }
 }

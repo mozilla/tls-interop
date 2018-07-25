@@ -87,6 +87,8 @@ pub struct TestConfig {
     client_shim: String,
     server_shim: String,
     rootdir: String,
+    client_writes_first: bool,
+    force_ipv4: bool,
 }
 
 // The results of the entire test run.
@@ -119,12 +121,12 @@ impl Results {
         }
     }
 
-    fn update(&mut self, case: &TestCase, index: Option<u32>, result: TestResult) {
+    fn update(&mut self, case: &TestCase, index: Option<u32>, result: &TestResult) {
         self.ran += 1;
 
         info!("{}: {}", result.to_string(), Results::case_name(case, index));
 
-        match result {
+        match *result {
             TestResult::OK => self.succeeded += 1,
             TestResult::Skipped => self.skipped += 1,
             TestResult::Failed => {
@@ -138,7 +140,7 @@ impl Results {
 fn make_params(params: &Option<TestCaseParams>) -> Vec<Vec<String>> {
     let mut mat = vec![];
 
-    if let &Some(ref p) = params {
+    if let Some(ref p) = *params {
         if let Some(ref versions) = p.versions {
             let mut alist = vec![];
             for ver in versions {
@@ -159,7 +161,7 @@ fn make_params(params: &Option<TestCaseParams>) -> Vec<Vec<String>> {
 }
 
 fn run_test_case_meta(results: &mut Results, config: &TestConfig, case: &TestCase) {
-    if !case.client_params.is_some() && !case.server_params.is_some() {
+    if case.client_params.is_none() && case.server_params.is_none() {
         let dummy = vec![];
         run_test_case(results, config, case, None, &dummy, &dummy);
     } else {
@@ -184,7 +186,7 @@ fn run_test_case(results: &mut Results,
                  extra_server_args: &Vec<String>) {
 
     let r = run_test_case_inner(config, case, extra_client_args, extra_server_args);
-    results.update(case, index, r);
+    results.update(case, index, &r);
 }
 
 fn run_test_case_inner(config: &TestConfig,
@@ -192,8 +194,10 @@ fn run_test_case_inner(config: &TestConfig,
                        extra_client_args: &Vec<String>,
                        extra_server_args: &Vec<String>)
                        -> TestResult {
-    // Create the server args
+    // Create the server and client args
     let mut server_args = extra_server_args.clone();
+    let mut client_args = extra_client_args.clone();
+
     server_args.push(String::from("-server"));
     let key_base = match case.server_key {
         None => String::from("rsa_1024"),
@@ -203,17 +207,25 @@ fn run_test_case_inner(config: &TestConfig,
     server_args.push(config.rootdir.clone() + &key_base + &String::from("_key.pem"));
     server_args.push(String::from("-cert-file"));
     server_args.push(config.rootdir.clone() + &key_base + &String::from("_cert.pem"));
-    server_args.push(String::from("-write-then-read"));
 
-    let mut server = match Agent::new("server", &config.server_shim, &case.server, server_args) {
+    // Decide if client or server should write first after successful handshake.
+    // Only nss_bogo_shim can do -write-then-read.
+    // bssl_shim and ossl_shim can only be used in the passive role.
+    match config.client_writes_first {
+        true => {client_args.push(String::from("-write-then-read"));},
+        false => {server_args.push(String::from("-write-then-read"));},
+    }
+
+    let mut server = match Agent::new("server", &config.server_shim,
+            &case.server, server_args, config) {
         Ok(a) => a,
         Err(e) => {
             return TestResult::from_status(e);
         }
     };
 
-    let client_args = extra_client_args.clone();
-    let mut client = match Agent::new("client", &config.client_shim, &case.client, client_args) {
+    let mut client = match Agent::new("client", &config.client_shim,
+            &case.client, client_args, config) {
         Ok(a) => a,
         Err(e) => {
             return TestResult::from_status(e);
@@ -222,7 +234,7 @@ fn run_test_case_inner(config: &TestConfig,
 
     shuttle(&mut client, &mut server);
 
-    return TestResult::merge(client.check_status(), server.check_status());
+    TestResult::merge(client.check_status(), server.check_status())
 }
 
 fn main() {
@@ -250,12 +262,24 @@ fn main() {
             .help("The test cases file to run")
             .takes_value(true)
             .required(true))
+        .arg(Arg::with_name("client-writes-first")
+            .long("client-writes-first")
+            .help("Client writes after handshake instead of server")
+            .takes_value(false)
+            .required(false))
+        .arg(Arg::with_name("force-IPv4")
+            .long("force-IPv4")
+            .help("Forces IPv4 Sockets even if IPv6 is available")
+            .takes_value(false)
+            .required(false))
         .get_matches();
 
     let config = TestConfig {
         client_shim: String::from(matches.value_of("client").unwrap()),
         server_shim: String::from(matches.value_of("server").unwrap()),
         rootdir: String::from(matches.value_of("rootdir").unwrap()),
+        client_writes_first: matches.is_present("client-writes-first"),
+        force_ipv4: matches.is_present("force-IPv4"),
     };
 
     let mut f = File::open(matches.value_of("cases").unwrap()).unwrap();
@@ -265,6 +289,7 @@ fn main() {
 
     let mut results = Results::new();
     for c in cases.cases {
+        debug!("Running test case: {:?}", c);
         run_test_case_meta(&mut results, &config, &c);
     }
 

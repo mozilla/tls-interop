@@ -31,10 +31,10 @@ impl TestResult {
 
 impl Display for TestResult {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        match self {
-            &TestResult::OK => write!(f, "SUCCEEDED"),
-            &TestResult::Skipped => write!(f, "SKIPPED"),
-            &TestResult::Failed => write!(f, "FAILED")
+        match *self {
+            TestResult::OK => write!(f, "SUCCEEDED"),
+            TestResult::Skipped => write!(f, "SKIPPED"),
+            TestResult::Failed => write!(f, "FAILED")
         }
     }
 }
