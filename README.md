@@ -1,5 +1,5 @@
-[Travis-CI](https://travis-ci.org/jallmann/tls-interop)
 
+[![Build Status](https://travis-ci.org/jallmann/tls-interop.svg?branch=master)](https://travis-ci.org/jallmann/tls-interop)
 
 Primitive TLS interop Harness
 =============================
