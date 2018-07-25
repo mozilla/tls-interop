@@ -18,12 +18,12 @@ cd boringssl
 mkdir build
 cd build
 cmake ..
-make
+make -j$(nproc)
 cd $ROOT_DIR
 git clone -q https://github.com/openssl/openssl.git
 cd openssl
 ./config enable-external-tests
-make
+make -j$(nproc)
 make install
 cd $TRAVIS_BUILD_DIR
 
