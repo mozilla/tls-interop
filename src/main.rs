@@ -1,26 +1,26 @@
 extern crate clap;
 #[macro_use]
 extern crate log;
+extern crate env_logger;
 extern crate mio;
 extern crate mio_extras;
-extern crate env_logger;
 extern crate rustc_serialize;
-use clap::{Arg, App};
-use mio::*;
+use clap::{App, Arg};
 use mio::tcp::Shutdown;
+use mio::*;
 use rustc_serialize::json;
+use std::fs;
 use std::io::prelude::*;
-use std::fs::File;
 use std::process::exit;
 mod agent;
 mod config;
-mod test_result;
 mod flatten;
+mod test_result;
 mod tests;
 use agent::Agent;
-use test_result::TestResult;
-use config::{TestCase, TestCases, TestCaseParams};
+use config::{TestCase, TestCaseParams, TestCases};
 use flatten::flatten;
+use test_result::TestResult;
 
 const CLIENT: Token = mio::Token(0);
 const SERVER: Token = mio::Token(1);
@@ -35,8 +35,11 @@ fn copy_data(poll: &Poll, from: &mut Agent, to: &mut Agent) {
     });
     if size == 0 {
         debug!("End of file on {}", from.name);
-        poll.deregister(&from.socket).expect("Could not deregister socket");
-        to.socket.shutdown(Shutdown::Write).expect("Shutdown failed");
+        poll.deregister(&from.socket)
+            .expect("Could not deregister socket");
+        to.socket
+            .shutdown(Shutdown::Write)
+            .expect("Shutdown failed");
         from.alive = false;
         return;
     }
@@ -121,16 +124,46 @@ impl Results {
         }
     }
 
-    fn update(&mut self, case: &TestCase, index: Option<u32>, result: &TestResult) {
+    fn update(
+        &mut self,
+        case: &TestCase,
+        index: Option<u32>,
+        raw_result: Result<(std::process::Output, std::process::Output), i32>,
+    ) {
         self.ran += 1;
+        let result = match raw_result {
+            Ok((c, s)) => {
+                let c_status = TestResult::from_status(c.status.code().unwrap_or(-1));
+                let s_status = TestResult::from_status(s.status.code().unwrap_or(-1));
+                (TestResult::merge(c_status, s_status), Some(c), Some(s))
+            }
+            Err(e) => (TestResult::from_status(e), None, None),
+        };
+        info!(
+            "{}: {}",
+            result.0.to_string(),
+            Results::case_name(case, index)
+        );
 
-        info!("{}: {}", result.to_string(), Results::case_name(case, index));
-
-        match *result {
-            TestResult::OK => self.succeeded += 1,
-            TestResult::Skipped => self.skipped += 1,
-            TestResult::Failed => {
-                println!("FAILED: {}", Results::case_name(case, index));
+        match result {
+            (TestResult::OK, _, _) => self.succeeded += 1,
+            (TestResult::Skipped, _, _) => self.skipped += 1,
+            (TestResult::Failed, client, server) => {
+                println!("\nFAILED: {}\n", Results::case_name(case, index));
+                //Stdout would also be available for printing at this point, in case it turns out
+                //to be informative, which was never the case so far.
+                match client {
+                    Some(c) => {
+                        println!("Client: \n{}", String::from_utf8(c.stderr.clone()).unwrap())
+                    }
+                    None => {}
+                };
+                match server {
+                    Some(s) => {
+                        println!("Server: \n{}", String::from_utf8(s.stderr.clone()).unwrap())
+                    }
+                    None => {}
+                };
                 self.failed += 1
             }
         }
@@ -178,22 +211,24 @@ fn run_test_case_meta(results: &mut Results, config: &TestConfig, case: &TestCas
     }
 }
 
-fn run_test_case(results: &mut Results,
-                 config: &TestConfig,
-                 case: &TestCase,
-                 index: Option<u32>,
-                 extra_client_args: &Vec<String>,
-                 extra_server_args: &Vec<String>) {
-
-    let r = run_test_case_inner(config, case, extra_client_args, extra_server_args);
-    results.update(case, index, &r);
+fn run_test_case(
+    results: &mut Results,
+    config: &TestConfig,
+    case: &TestCase,
+    index: Option<u32>,
+    extra_client_args: &Vec<String>,
+    extra_server_args: &Vec<String>,
+) {
+    let res = run_test_case_inner(config, case, extra_client_args, extra_server_args);
+    results.update(case, index, res);
 }
 
-fn run_test_case_inner(config: &TestConfig,
-                       case: &TestCase,
-                       extra_client_args: &Vec<String>,
-                       extra_server_args: &Vec<String>)
-                       -> TestResult {
+fn run_test_case_inner(
+    config: &TestConfig,
+    case: &TestCase,
+    extra_client_args: &Vec<String>,
+    extra_server_args: &Vec<String>,
+) -> Result<(std::process::Output, std::process::Output), i32> {
     // Create the server and client args
     let mut server_args = extra_server_args.clone();
     let mut client_args = extra_client_args.clone();
@@ -212,29 +247,44 @@ fn run_test_case_inner(config: &TestConfig,
     // Only nss_bogo_shim can do -write-then-read.
     // bssl_shim and ossl_shim can only be used in the passive role.
     match config.client_writes_first {
-        true => {client_args.push(String::from("-write-then-read"));},
-        false => {server_args.push(String::from("-write-then-read"));},
+        true => {
+            client_args.push(String::from("-write-then-read"));
+        }
+        false => {
+            server_args.push(String::from("-write-then-read"));
+        }
     }
 
-    let mut server = match Agent::new("server", &config.server_shim,
-            &case.server, server_args, config) {
+    let mut server = match Agent::new(
+        "server",
+        &config.server_shim,
+        &case.server,
+        server_args,
+        config.force_ipv4,
+    ) {
         Ok(a) => a,
         Err(e) => {
-            return TestResult::from_status(e);
+            return Err(e);
         }
     };
 
-    let mut client = match Agent::new("client", &config.client_shim,
-            &case.client, client_args, config) {
+    let mut client = match Agent::new(
+        "client",
+        &config.client_shim,
+        &case.client,
+        client_args,
+        config.force_ipv4,
+    ) {
         Ok(a) => a,
         Err(e) => {
-            return TestResult::from_status(e);
+            return Err(e);
         }
     };
 
     shuttle(&mut client, &mut server);
-
-    TestResult::merge(client.check_status(), server.check_status())
+    let c_output = client.check_status();
+    let s_output = server.check_status();
+    Ok((c_output, s_output))
 }
 
 fn main() {
@@ -242,36 +292,48 @@ fn main() {
 
     let matches = App::new("TLS interop tests")
         .version("0.0")
-        .arg(Arg::with_name("client")
-            .long("client")
-            .help("The shim to use as the client")
-            .takes_value(true)
-            .required(true))
-        .arg(Arg::with_name("server")
-            .long("server")
-            .help("The shim to use as the server")
-            .takes_value(true)
-            .required(true))
-        .arg(Arg::with_name("rootdir")
-            .long("rootdir")
-            .help("The path where the working files are")
-            .takes_value(true)
-            .required(true))
-        .arg(Arg::with_name("cases")
-            .long("test-cases")
-            .help("The test cases file to run")
-            .takes_value(true)
-            .required(true))
-        .arg(Arg::with_name("client-writes-first")
-            .long("client-writes-first")
-            .help("Client writes after handshake instead of server")
-            .takes_value(false)
-            .required(false))
-        .arg(Arg::with_name("force-IPv4")
-            .long("force-IPv4")
-            .help("Forces IPv4 Sockets even if IPv6 is available")
-            .takes_value(false)
-            .required(false))
+        .arg(
+            Arg::with_name("client")
+                .long("client")
+                .help("The shim to use as the client")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("server")
+                .long("server")
+                .help("The shim to use as the server")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("rootdir")
+                .long("rootdir")
+                .help("The path where the working files are")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("cases")
+                .long("test-cases")
+                .help("The test cases file to run")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("client-writes-first")
+                .long("client-writes-first")
+                .help("Client writes after handshake instead of server")
+                .takes_value(false)
+                .required(false),
+        )
+        .arg(
+            Arg::with_name("force-IPv4")
+                .long("force-IPv4")
+                .help("Forces IPv4 Sockets even if IPv6 is available")
+                .takes_value(false)
+                .required(false),
+        )
         .get_matches();
 
     let config = TestConfig {
@@ -282,10 +344,11 @@ fn main() {
         force_ipv4: matches.is_present("force-IPv4"),
     };
 
-    let mut f = File::open(matches.value_of("cases").unwrap()).unwrap();
+    let mut f = fs::File::open(matches.value_of("cases").unwrap()).unwrap();
     let mut s = String::from("");
-    f.read_to_string(&mut s).expect("Could not read file to string");
-    let cases: TestCases = json::decode(&s).unwrap();
+    f.read_to_string(&mut s)
+        .expect("Could not read file to string");
+    let cases: TestCases = json::decode(&s).expect("Malformed JSON config file.");
 
     let mut results = Results::new();
     for c in cases.cases {
@@ -293,11 +356,10 @@ fn main() {
         run_test_case_meta(&mut results, &config, &c);
     }
 
-    println!("Tests {}; Succeeded {}; Skipped {}, Failed {}",
-             results.ran,
-             results.succeeded,
-             results.skipped,
-             results.failed);
+    println!(
+        "Tests {}; Succeeded {}; Skipped {}, Failed {}",
+        results.ran, results.succeeded, results.skipped, results.failed
+    );
 
     if results.failed != 0 {
         exit(1);

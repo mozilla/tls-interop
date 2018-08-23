@@ -1,15 +1,14 @@
 extern crate mio;
 extern crate mio_extras;
+extern crate rustc_serialize;
 
+use config::*;
+use mio::tcp::{TcpListener, TcpStream};
 use mio::*;
 use mio_extras::channel;
 use mio_extras::channel::Receiver;
-use mio::tcp::{TcpListener, TcpStream};
-use std::process::{Command, ExitStatus};
+use std::process::{Command, ExitStatus, Output, Stdio};
 use std::thread;
-use test_result::TestResult;
-use config::*;
-use TestConfig;
 
 const SERVER: Token = mio::Token(1);
 const STATUS: Token = mio::Token(2);
@@ -20,30 +19,41 @@ pub struct Agent {
     path: String,
     args: Vec<String>,
     pub socket: TcpStream,
-    child: Receiver<i32>,
+    child: Receiver<Output>,
     pub alive: bool,
     exit_value: Option<ExitStatus>,
 }
 
+fn cipher_string_to_ossl(input: &str) -> String {
+    String::from(input)
+        .replace("TLS_", "")
+        .replace("AES_", "AES")
+        .replace("_", "-")
+        .replace("-WITH", "")
+}
 
 impl Agent {
-    pub fn new(name: &str,
-               path: &str,
-               agent: &Option<TestCaseAgent>,
-               args: Vec<String>,
-               conf: &TestConfig)
-               -> Result<Agent, i32> {
+    pub fn new(
+        name: &str,
+        path: &str,
+        agent: &Option<TestCaseAgent>,
+        args: Vec<String>,
+        ipv4: bool,
+    ) -> Result<Agent, i32> {
         // IPv6 listener by default, IPv4 fallback, unless IPv4 is forced.
         let addr6 = "[::1]:0".parse().unwrap();
         let addr4 = "127.0.0.1:0".parse().unwrap();
-        let listener = match conf.force_ipv4 {
-            false => TcpListener::bind(&addr6).or_else(|_| {
-                TcpListener::bind(&addr4)}).unwrap(),
+        let listener = match ipv4 {
+            false => TcpListener::bind(&addr6)
+                .or_else(|_| TcpListener::bind(&addr4))
+                .unwrap(),
             true => TcpListener::bind(&addr4).unwrap(),
         };
 
+        let ossl_cipher_format = path.contains("bssl_shim") || path.contains("ossl_shim");
         // Start the subprocess.
         let mut command = Command::new(path.to_owned());
+
         // Process parameters.
         if let Some(ref a) = *agent {
             if let Some(ref min) = a.min_version {
@@ -53,6 +63,16 @@ impl Agent {
             if let Some(ref min) = a.max_version {
                 command.arg("-max-version");
                 command.arg(min.to_string());
+            }
+            if let Some(ref cipher) = a.cipher {
+                match ossl_cipher_format {
+                    true => command.arg("-cipher"),
+                    false => command.arg("-nss-cipher"),
+                };
+                match ossl_cipher_format {
+                    true => command.arg(cipher_string_to_ossl(&cipher.to_string())),
+                    false => command.arg(cipher.to_string()),
+                };
             }
             if let Some(ref flags) = a.flags {
                 for f in flags {
@@ -69,8 +89,9 @@ impl Agent {
         // Add common args.
         command.arg("-port");
         command.arg(listener.local_addr().unwrap().port().to_string());
+        command.stdout(Stdio::piped()).stderr(Stdio::piped());
         debug!("Executing command {:?}", &command);
-        let mut child = command.spawn().unwrap();
+        let child = command.spawn().expect("Failed spawning child process.");
 
         // Listen for connect
         // Create an poll instance
@@ -81,16 +102,19 @@ impl Agent {
 
         // This is gross, but we can't reregister channels.
         // https://github.com/carllerche/mio/issues/506
-        let (txf, rxf) = channel::channel::<i32>();
-        let (txf2, rxf2) = channel::channel::<i32>();
+        let (txf, rxf) = channel::channel::<Output>();
+        let (txf2, rxf2) = channel::channel::<Output>();
 
         poll.register(&rxf, STATUS, Ready::readable(), PollOpt::level())
             .unwrap();
 
         thread::spawn(move || {
-            let ecode = child.wait().expect("failed waiting for subprocess");
-            txf.send(ecode.code().unwrap_or(-1)).ok();
-            txf2.send(ecode.code().unwrap_or(-1)).ok();
+            let output = child
+                .wait_with_output()
+                .expect("Failed waiting for subprocess");
+
+            txf.send(output.clone()).ok();
+            txf2.send(output.clone()).ok();
         });
 
         poll.poll(&mut events, None).unwrap();
@@ -112,16 +136,20 @@ impl Agent {
                 })
             }
             STATUS => {
-                let err = rxf.try_recv().unwrap();
-                info!("Failed {}", err);
-                Err(err)
+                let output = rxf.try_recv().unwrap();
+                info!("Failed {}", output.status);
+                println!(
+                    "Stderr: \n{}",
+                    String::from_utf8(output.stderr.clone()).unwrap()
+                );
+                Err(output.status.code().unwrap())
             }
-            _ => Err(-1)
+            _ => Err(-1),
         }
     }
 
     // Read the status from the subthread.
-    pub fn check_status(&self) -> TestResult {
+    pub fn check_status(&self) -> Output {
         debug!("Getting status for {}", self.name);
         // try_recv() is nonblocking, so poll until it's readable.
         let poll = Poll::new().unwrap();
@@ -130,8 +158,9 @@ impl Agent {
         let mut events = Events::with_capacity(1);
         poll.poll(&mut events, None).unwrap();
 
-        let code = self.child.try_recv().unwrap();
+        let output = self.child.try_recv().unwrap();
+        let code = output.status.code().unwrap_or(-1);
         debug!("Exit status for {} = {}", self.name, code);
-        TestResult::from_status(code)
+        output.clone()
     }
 }

@@ -34,7 +34,7 @@ impl Display for TestResult {
         match *self {
             TestResult::OK => write!(f, "SUCCEEDED"),
             TestResult::Skipped => write!(f, "SKIPPED"),
-            TestResult::Failed => write!(f, "FAILED")
+            TestResult::Failed => write!(f, "FAILED"),
         }
     }
 }

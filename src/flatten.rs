@@ -1,7 +1,9 @@
-fn flatten_sub(mat: &Vec<Vec<Vec<String>>>,
-               index: usize,
-               so_far: &Vec<String>,
-               output: &mut Vec<Vec<String>>) {
+fn flatten_sub(
+    mat: &Vec<Vec<Vec<String>>>,
+    index: usize,
+    so_far: &Vec<String>,
+    output: &mut Vec<Vec<String>>,
+) {
     if index == mat.len() {
         output.push(so_far.clone());
         return;
