@@ -139,8 +139,9 @@ impl Agent {
                 let output = rxf.try_recv().unwrap();
                 info!("Failed {}", output.status);
                 println!(
-                    "Stderr: \n{}",
-                    String::from_utf8(output.stderr.clone()).unwrap()
+                    "Stderr: \n{}, \nStdout: \n{}",
+                    String::from_utf8(output.stderr.clone()).unwrap(),
+                    String::from_utf8(output.stdout.clone()).unwrap()
                 );
                 Err(output.status.code().unwrap())
             }

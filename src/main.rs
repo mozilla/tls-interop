@@ -154,13 +154,16 @@ impl Results {
                 //to be informative, which was never the case so far.
                 match client {
                     Some(c) => {
-                        println!("Client: \n{}", String::from_utf8(c.stderr.clone()).unwrap())
+                        println!("Client stderr: \n{}", String::from_utf8(c.stderr.clone()).unwrap());
+                        println!("Client stdout: \n{}", String::from_utf8(c.stdout.clone()).unwrap())
+
                     }
                     None => {}
                 };
                 match server {
                     Some(s) => {
-                        println!("Server: \n{}", String::from_utf8(s.stderr.clone()).unwrap())
+                        println!("Server stderr: \n{}", String::from_utf8(s.stderr.clone()).unwrap());
+                        println!("Server stdout: \n{}", String::from_utf8(s.stdout.clone()).unwrap())
                     }
                     None => {}
                 };
