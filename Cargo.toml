@@ -6,7 +6,8 @@ authors = ["EKR <ekr@rtfm.com>"]
 [features]
 
 [dependencies]
-mio = "0.6"
+mio = "0.6.12"
+mio-extras = "2.0.3"
 rustc-serialize = "0.3"
 log = "0"
 env_logger = "0"
