@@ -37,9 +37,12 @@ fn copy_data(poll: &Poll, from: &mut Agent, to: &mut Agent) {
         debug!("End of file on {}", from.name);
         poll.deregister(&from.socket)
             .expect("Could not deregister socket");
-        to.socket
-            .shutdown(Shutdown::Write)
-            .expect("Shutdown failed");
+        match to.socket.shutdown(Shutdown::Write) {
+            Ok(()) => {}
+            Err(_) => {
+                debug!("Shutdown of write to {} failed", to.name);
+            }
+        }
         from.alive = false;
         return;
     }
