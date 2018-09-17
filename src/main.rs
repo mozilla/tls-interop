@@ -159,7 +159,6 @@ impl Results {
                     Some(c) => {
                         println!("Client stderr: \n{}", String::from_utf8(c.stderr.clone()).unwrap());
                         println!("Client stdout: \n{}", String::from_utf8(c.stdout.clone()).unwrap())
-
                     }
                     None => {}
                 };

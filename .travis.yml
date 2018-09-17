@@ -3,8 +3,6 @@ dist: trusty
 language: rust
 rust:
   - stable
-env:
-  - LD_LIBRARY_PATH=/home/travis/build/jallmann/dist/Debug/lib:/home/travis/build/jallmann/openssl
 addons:
   hosts:
     - localhost.localdomain
@@ -12,4 +10,3 @@ before_install:
   - sudo apt-get install -y zlib1g-dev ninja-build
 script:
   - ./travis_script.sh
-
