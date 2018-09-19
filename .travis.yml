@@ -1,0 +1,12 @@
+sudo: required
+dist: trusty
+language: rust
+rust:
+  - stable
+addons:
+  hosts:
+    - localhost.localdomain
+before_install:
+  - sudo apt-get install -y zlib1g-dev ninja-build
+script:
+  - ./travis_script.sh
