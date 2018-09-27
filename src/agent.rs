@@ -12,6 +12,7 @@ use std::thread;
 
 const SERVER: Token = mio::Token(1);
 const STATUS: Token = mio::Token(2);
+const ERR_CIPHER_BLACKLISTED: i32 = 89;
 
 #[allow(dead_code)]
 pub struct Agent {
@@ -24,19 +25,12 @@ pub struct Agent {
     exit_value: Option<ExitStatus>,
 }
 
-fn cipher_string_to_ossl(input: &str) -> String {
-    String::from(input)
-        .replace("TLS_", "")
-        .replace("AES_", "AES")
-        .replace("_", "-")
-        .replace("-WITH", "")
-}
-
 impl Agent {
     pub fn new(
         name: &str,
         path: &str,
         agent: &Option<TestCaseAgent>,
+        blacklist: &CipherBlacklist,
         args: Vec<String>,
         ipv4: bool,
     ) -> Result<Agent, i32> {
@@ -49,7 +43,7 @@ impl Agent {
                 .unwrap(),
             true => TcpListener::bind(&addr4).unwrap(),
         };
-
+        
         let ossl_cipher_format = path.contains("bssl_shim") || path.contains("ossl_shim");
         // Start the subprocess.
         let mut command = Command::new(path.to_owned());
@@ -65,13 +59,12 @@ impl Agent {
                 command.arg(min.to_string());
             }
             if let Some(ref cipher) = a.cipher {
+                if blacklist.check(cipher, path) {
+                    return Err(ERR_CIPHER_BLACKLISTED);
+                }
                 match ossl_cipher_format {
-                    true => command.arg("-cipher"),
-                    false => command.arg("-nss-cipher"),
-                };
-                match ossl_cipher_format {
-                    true => command.arg(cipher_string_to_ossl(&cipher.to_string())),
-                    false => command.arg(cipher.to_string()),
+                    true => command.arg("-cipher").arg(cipher.to_string().split(";").collect::<Vec<&str>>().get(1).unwrap()),
+                    false => command.arg("-nss-cipher").arg(cipher.to_string().split(";").collect::<Vec<&str>>().get(0).unwrap()),
                 };
             }
             if let Some(ref flags) = a.flags {
@@ -82,7 +75,27 @@ impl Agent {
         }
 
         // Add specific args.
-        for arg in &args {
+        // Modify cipher arguments to match the format required by the different shims. 
+        let mut cipher_arg=false;
+        for a in &args {
+            let mut arg = a.clone();
+            if cipher_arg {
+                if blacklist.check(&arg, path) {
+                    return Err(ERR_CIPHER_BLACKLISTED);
+                }
+                match ossl_cipher_format {
+                    true => command.arg(arg.to_string().split(";").collect::<Vec<&str>>().get(1).unwrap()),
+                    false => command.arg(arg.to_string().split(";").collect::<Vec<&str>>().get(0).unwrap()),
+                };
+                cipher_arg=false;
+                continue;
+            }
+            if arg.contains("-cipher") {
+                if !ossl_cipher_format {
+                    arg.insert_str(0, "-nss")
+                }
+                cipher_arg=true;
+            }
             command.arg(arg);
         }
 

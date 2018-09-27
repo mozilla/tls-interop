@@ -1,5 +1,5 @@
 
-[![Build Status](https://travis-ci.org/jallmann/tls-interop.svg?branch=master)](https://travis-ci.org/jallmann/tls-interop)
+[![Build Status](https://travis-ci.org/mozilla/tls-interop.svg?branch=master)](https://travis-ci.org/mozilla/tls-interop)
 
 Primitive TLS interop Harness
 =============================
@@ -26,11 +26,27 @@ tls_interop --client ${NSS_ROOT}/dist/Darwin15.6.0_cc_64_DBG.OBJ/bin/nss_bogo_sh
 
 To swap client and server, you need to run it twice.
 
+The run.sh script makes it easier to run a certain configuration of shims and 
+test cases, provided the shims for nss, boringssl and openssl executables can
+be found in the default locations as specified under Cargo Test Instructions.
+
+Example:
+
+```
+./run.sh -m loopback -c cases.json -v
+```
+
+-v is for verbose output.
+-m is for mode, the configuration of shims used as client and server.
+-c is for case file, the file with test cases. 
+
+All available modes are: all, loopback, boring_client, boring_server, ossl_client, ossl_server.
+
 
 Cargo Test Instructions
 ============================
 Some of the internal rust test cases run with "cargo test" assume readily built
-versions of nss, boringssl and openssl being available in the parent diretory.
+versions of nss, boringssl and openssl being available in the parent directory.
 The NSS shim is expected to be found at "../dist/Debug/bin/nss_bogo_shim".  
 The BoringSSL shim is expected to be found at "../boringssl/build/ssl/test/bssl_shim".  
 The OpenSSL shim is expected to be found at "../openssl/tests/ossl_shim/ossl_shim".
@@ -46,6 +62,6 @@ OSSL_SHIM_PATH = ${OPENSSL_ROOT}/tests/ossl_shim/ossl_shim
 ```
 cargo test
 ```
-Runs only a set of very basic connection tests between nss and the other two 
+Runs a set of very basic connection tests between nss and the other two 
 shims and additionally all test cases specified in the cases.json file, in each 
 available combination of shims.
