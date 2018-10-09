@@ -18,7 +18,7 @@ mod flatten;
 mod test_result;
 mod tests;
 use agent::Agent;
-use config::{TestCase, TestCaseParams, TestCases, CipherBlacklist};
+use config::{CipherBlacklist, TestCase, TestCaseParams, TestCases};
 use flatten::flatten;
 use test_result::TestResult;
 
@@ -159,15 +159,27 @@ impl Results {
                 //to be informative, which was never the case so far.
                 match client {
                     Some(c) => {
-                        println!("Client stderr: \n{}", String::from_utf8(c.stderr.clone()).unwrap());
-                        println!("Client stdout: \n{}", String::from_utf8(c.stdout.clone()).unwrap())
+                        println!(
+                            "Client stderr: \n{}",
+                            String::from_utf8(c.stderr.clone()).unwrap()
+                        );
+                        println!(
+                            "Client stdout: \n{}",
+                            String::from_utf8(c.stdout.clone()).unwrap()
+                        )
                     }
                     None => {}
                 };
                 match server {
                     Some(s) => {
-                        println!("Server stderr: \n{}", String::from_utf8(s.stderr.clone()).unwrap());
-                        println!("Server stdout: \n{}", String::from_utf8(s.stdout.clone()).unwrap())
+                        println!(
+                            "Server stderr: \n{}",
+                            String::from_utf8(s.stderr.clone()).unwrap()
+                        );
+                        println!(
+                            "Server stdout: \n{}",
+                            String::from_utf8(s.stdout.clone()).unwrap()
+                        )
                     }
                     None => {}
                 };
@@ -216,7 +228,8 @@ fn make_params(params: &Option<TestCaseParams>) -> Vec<Vec<String>> {
 }
 
 fn run_test_case_meta(results: &mut Results, config: &TestConfig, case: &TestCase) {
-    if case.client_params.is_none() && case.server_params.is_none() && case.shared_params.is_none() {
+    if case.client_params.is_none() && case.server_params.is_none() && case.shared_params.is_none()
+    {
         let dummy = vec![];
         run_test_case(results, config, case, None, &dummy, &dummy, &dummy);
     } else {
@@ -224,7 +237,7 @@ fn run_test_case_meta(results: &mut Results, config: &TestConfig, case: &TestCas
         let server_args = make_params(&case.server_params);
         let shared_args = make_params(&case.shared_params);
         let mut index: u32 = 0;
-        
+
         for c in &client_args {
             for s in &server_args {
                 for sh in &shared_args {
@@ -232,7 +245,7 @@ fn run_test_case_meta(results: &mut Results, config: &TestConfig, case: &TestCas
                     index += 1;
                 }
             }
-        }        
+        }
     }
 }
 
@@ -243,9 +256,15 @@ fn run_test_case(
     index: Option<u32>,
     extra_client_args: &Vec<String>,
     extra_server_args: &Vec<String>,
-    extra_shared_args: &Vec<String>
+    extra_shared_args: &Vec<String>,
 ) {
-    let res = run_test_case_inner(config, case, extra_client_args, extra_server_args, extra_shared_args);
+    let res = run_test_case_inner(
+        config,
+        case,
+        extra_client_args,
+        extra_server_args,
+        extra_shared_args,
+    );
     results.update(case, index, res);
 }
 
@@ -254,12 +273,12 @@ fn run_test_case_inner(
     case: &TestCase,
     extra_client_args: &Vec<String>,
     extra_server_args: &Vec<String>,
-    extra_shared_args: &Vec<String>
+    extra_shared_args: &Vec<String>,
 ) -> Result<(std::process::Output, std::process::Output), i32> {
     // Create the server and client args
     let mut server_args = extra_server_args.clone();
     let mut client_args = extra_client_args.clone();
-    
+
     for arg in extra_shared_args {
         server_args.push(arg.clone());
         client_args.push(arg.clone());
@@ -369,17 +388,17 @@ fn main() {
                 .required(false),
         )
         .get_matches();
-    
+
     let mut bl = CipherBlacklist::new();
     bl.init(BLACKLIST_FILE);
-     
+
     let config = TestConfig {
         client_shim: String::from(matches.value_of("client").unwrap()),
         server_shim: String::from(matches.value_of("server").unwrap()),
         rootdir: String::from(matches.value_of("rootdir").unwrap()),
         client_writes_first: matches.is_present("client-writes-first"),
         force_ipv4: matches.is_present("force-IPv4"),
-        blacklist: bl
+        blacklist: bl,
     };
 
     let mut f = fs::File::open(matches.value_of("cases").unwrap()).unwrap();

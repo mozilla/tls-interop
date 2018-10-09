@@ -1,7 +1,7 @@
-use std::fs;
-use std::io::prelude::*;
 use rustc_serialize::json;
 use std::collections::HashMap;
+use std::fs;
+use std::io::prelude::*;
 
 // The config file that corresponds to a test.
 #[derive(RustcDecodable, RustcEncodable, Debug)]
@@ -16,7 +16,7 @@ pub struct TestCaseAgent {
 // These are parameters which let us run parametrized tests.
 pub struct TestCaseParams {
     pub versions: Option<Vec<i32>>,
-    pub ciphers: Option<Vec<String>>
+    pub ciphers: Option<Vec<String>>,
 }
 
 #[derive(RustcDecodable, RustcEncodable, Debug)]
@@ -42,11 +42,9 @@ pub struct CipherBlacklist {
 
 impl CipherBlacklist {
     pub fn new() -> CipherBlacklist {
-        CipherBlacklist {
-            blacklist: None,
-        }
+        CipherBlacklist { blacklist: None }
     }
-    
+
     pub fn init(&mut self, file: &str) {
         let mut bl = fs::File::open(file).unwrap();
         let mut bls = String::from("");
@@ -54,7 +52,7 @@ impl CipherBlacklist {
             .expect("Could not read file to string.");
         *self = json::decode(&bls).expect("Malformed JSON blacklist file.");
     }
-    
+
     pub fn check(&self, cipher: &str, shim: &str) -> bool {
         if let Some(list) = self.blacklist.clone() {
             if let Some(l) = list.get(cipher) {

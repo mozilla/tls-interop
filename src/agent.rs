@@ -44,7 +44,7 @@ impl Agent {
                 .unwrap(),
             true => TcpListener::bind(&addr4).unwrap(),
         };
-        
+
         let ossl_cipher_format = path.contains("bssl_shim") || path.contains("ossl_shim");
         // Start the subprocess.
         let mut command = Command::new(path.to_owned());
@@ -64,8 +64,22 @@ impl Agent {
                     return Err(ERR_CIPHER_BLACKLISTED);
                 }
                 match ossl_cipher_format {
-                    true => command.arg("-cipher").arg(cipher.to_string().split(";").collect::<Vec<&str>>().get(1).unwrap()),
-                    false => command.arg("-nss-cipher").arg(cipher.to_string().split(";").collect::<Vec<&str>>().get(0).unwrap()),
+                    true => command.arg("-cipher").arg(
+                        cipher
+                            .to_string()
+                            .split(";")
+                            .collect::<Vec<&str>>()
+                            .get(1)
+                            .unwrap(),
+                    ),
+                    false => command.arg("-nss-cipher").arg(
+                        cipher
+                            .to_string()
+                            .split(";")
+                            .collect::<Vec<&str>>()
+                            .get(0)
+                            .unwrap(),
+                    ),
                 };
             }
             if let Some(ref flags) = a.flags {
@@ -76,8 +90,8 @@ impl Agent {
         }
 
         // Add specific args.
-        // Modify cipher arguments to match the format required by the different shims. 
-        let mut cipher_arg=false;
+        // Modify cipher arguments to match the format required by the different shims.
+        let mut cipher_arg = false;
         for a in &args {
             let mut arg = a.clone();
             if cipher_arg {
@@ -85,17 +99,29 @@ impl Agent {
                     return Err(ERR_CIPHER_BLACKLISTED);
                 }
                 match ossl_cipher_format {
-                    true => command.arg(arg.to_string().split(";").collect::<Vec<&str>>().get(1).unwrap()),
-                    false => command.arg(arg.to_string().split(";").collect::<Vec<&str>>().get(0).unwrap()),
+                    true => command.arg(
+                        arg.to_string()
+                            .split(";")
+                            .collect::<Vec<&str>>()
+                            .get(1)
+                            .unwrap(),
+                    ),
+                    false => command.arg(
+                        arg.to_string()
+                            .split(";")
+                            .collect::<Vec<&str>>()
+                            .get(0)
+                            .unwrap(),
+                    ),
                 };
-                cipher_arg=false;
+                cipher_arg = false;
                 continue;
             }
             if arg.contains("-cipher") {
                 if !ossl_cipher_format {
                     arg.insert_str(0, "-nss")
                 }
-                cipher_arg=true;
+                cipher_arg = true;
             }
             command.arg(arg);
         }
@@ -176,7 +202,10 @@ impl Agent {
         // available on the channel.
         poll.poll(&mut events, Some(Duration::new(5, 0))).unwrap();
         debug!("Poll successful or timed out. Trying to receive output...");
-        let output = self.child.try_recv().expect("Failed to receive output from subthread.");
+        let output = self
+            .child
+            .try_recv()
+            .expect("Failed to receive output from subthread.");
         let code = output.status.code().unwrap_or(-1);
         debug!("Exit status for {} = {}", self.name, code);
         output.clone()

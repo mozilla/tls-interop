@@ -32,7 +32,7 @@ fn test_simple_connection() {
         ConfigType::BsslServer,
         ConfigType::OsslServer,
         ConfigType::BsslClient,
-        ConfigType::OsslClient
+        ConfigType::OsslClient,
     ];
     for config in configs {
         inner_test_simple(config);
@@ -46,7 +46,7 @@ fn test_all_cases() {
         ConfigType::BsslServer,
         ConfigType::OsslServer,
         ConfigType::BsslClient,
-        ConfigType::OsslClient
+        ConfigType::OsslClient,
     ];
     for config in configs {
         inner_test_all_cases(config);
@@ -156,7 +156,7 @@ fn prepare_config(conf_type: ConfigType) -> TestConfig {
             let mut blacklist = config::CipherBlacklist::new();
             blacklist.init(BLACKLIST_FILE);
             blacklist
-        }
+        },
     }
 }
 
