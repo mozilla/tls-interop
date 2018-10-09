@@ -9,6 +9,7 @@ use mio_extras::channel;
 use mio_extras::channel::Receiver;
 use std::process::{Command, ExitStatus, Output, Stdio};
 use std::thread;
+use std::time::Duration;
 
 const SERVER: Token = mio::Token(1);
 const STATUS: Token = mio::Token(2);
@@ -170,9 +171,12 @@ impl Agent {
         poll.register(&self.child, STATUS, Ready::readable(), PollOpt::level())
             .unwrap();
         let mut events = Events::with_capacity(1);
-        poll.poll(&mut events, None).unwrap();
-
-        let output = self.child.try_recv().unwrap();
+        // There's an (arbitrary) 5 second timeout for polling, because this poll seemed to cause
+        // indefinite blocking of the main thread in rare cases, even when there was an event
+        // available on the channel.
+        poll.poll(&mut events, Some(Duration::new(5, 0))).unwrap();
+        debug!("Poll successful or timed out. Trying to receive output...");
+        let output = self.child.try_recv().expect("Failed to receive output from subthread.");
         let code = output.status.code().unwrap_or(-1);
         debug!("Exit status for {} = {}", self.name, code);
         output.clone()
