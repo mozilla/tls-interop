@@ -31,7 +31,7 @@ impl Agent {
         name: &str,
         path: &str,
         agent: &Option<TestCaseAgent>,
-        blacklist: &CipherBlacklist,
+        cipher_map: &CipherMap,
         args: Vec<String>,
         ipv4: bool,
     ) -> Result<Agent, i32> {
@@ -60,25 +60,15 @@ impl Agent {
                 command.arg(min.to_string());
             }
             if let Some(ref cipher) = a.cipher {
-                if blacklist.check(cipher, path) {
+                if cipher_map.check_blacklist(cipher, path) {
                     return Err(ERR_CIPHER_BLACKLISTED);
                 }
                 match ossl_cipher_format {
                     true => command.arg("-cipher").arg(
-                        cipher
-                            .to_string()
-                            .split(";")
-                            .collect::<Vec<&str>>()
-                            .get(1)
-                            .unwrap(),
+                        cipher_map.name_to_ossl(cipher)
                     ),
                     false => command.arg("-nss-cipher").arg(
                         cipher
-                            .to_string()
-                            .split(";")
-                            .collect::<Vec<&str>>()
-                            .get(0)
-                            .unwrap(),
                     ),
                 };
             }
@@ -95,23 +85,15 @@ impl Agent {
         for a in &args {
             let mut arg = a.clone();
             if cipher_arg {
-                if blacklist.check(&arg, path) {
+                if cipher_map.check_blacklist(&arg, path) {
                     return Err(ERR_CIPHER_BLACKLISTED);
                 }
                 match ossl_cipher_format {
                     true => command.arg(
-                        arg.to_string()
-                            .split(";")
-                            .collect::<Vec<&str>>()
-                            .get(1)
-                            .unwrap(),
+                        cipher_map.name_to_ossl(&arg),
                     ),
                     false => command.arg(
-                        arg.to_string()
-                            .split(";")
-                            .collect::<Vec<&str>>()
-                            .get(0)
-                            .unwrap(),
+                        arg
                     ),
                 };
                 cipher_arg = false;
@@ -197,10 +179,14 @@ impl Agent {
         poll.register(&self.child, STATUS, Ready::readable(), PollOpt::level())
             .unwrap();
         let mut events = Events::with_capacity(1);
-        // There's an (arbitrary) 5 second timeout for polling, because this poll seemed to cause
-        // indefinite blocking of the main thread in rare cases, even when there was an event
-        // available on the channel.
-        poll.poll(&mut events, Some(Duration::new(5, 0))).unwrap();
+        // poll() used to cause indefinite blocking of the main thread in rare cases, and,
+        // consequently, intermittent timeouts of the whole test suite. It is now set to time out
+        // and stop blocking after 30 seconds.
+        // The output of the subthread should always be readable on the channel by that time. It
+        // seems that poll() missed the event if it was registered after the arrival of the output.
+        // There's currently no proof this fixes the issue, but no timeouts have been observed
+        // since the change was implemented.
+        poll.poll(&mut events, Some(Duration::new(30, 0))).unwrap();
         debug!("Poll successful or timed out. Trying to receive output...");
         let output = self
             .child

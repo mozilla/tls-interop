@@ -152,10 +152,10 @@ fn prepare_config(conf_type: ConfigType) -> TestConfig {
             ConfigType::OsslServer | ConfigType::OsslClient => true,
             _ => false,
         },
-        blacklist: {
-            let mut blacklist = config::CipherBlacklist::new();
-            blacklist.init(BLACKLIST_FILE);
-            blacklist
+        cipher_map: {
+            let mut map = config::CipherMap::new();
+            map.init(CIPHER_MAP_FILE);
+            map
         },
     }
 }

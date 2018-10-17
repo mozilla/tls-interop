@@ -35,34 +35,51 @@ pub struct TestCases {
     pub cases: Vec<TestCase>,
 }
 
+
 #[derive(RustcDecodable, RustcEncodable, Debug)]
-pub struct CipherBlacklist {
-    pub blacklist: Option<HashMap<String, Vec<String>>>,
+pub struct CipherMapItem {
+    pub comment: String,
+    pub ossl_name: String,
+    pub blacklist: Vec<String>,
 }
 
-impl CipherBlacklist {
-    pub fn new() -> CipherBlacklist {
-        CipherBlacklist { blacklist: None }
+#[derive(RustcDecodable, RustcEncodable, Debug)]
+pub struct CipherMap {
+    pub map: Option<HashMap<String, CipherMapItem>>,
+}
+
+impl CipherMap {
+    pub fn new() -> CipherMap {
+        CipherMap { map: None }
     }
 
     pub fn init(&mut self, file: &str) {
-        let mut bl = fs::File::open(file).unwrap();
-        let mut bls = String::from("");
-        bl.read_to_string(&mut bls)
+        let mut f = fs::File::open(file).unwrap();
+        let mut map = String::from("");
+        f.read_to_string(&mut map)
             .expect("Could not read file to string.");
-        *self = json::decode(&bls).expect("Malformed JSON blacklist file.");
+        *self = json::decode(&map).expect("Malformed JSON CipherMap file.");
     }
 
-    pub fn check(&self, cipher: &str, shim: &str) -> bool {
-        if let Some(list) = self.blacklist.clone() {
+    pub fn check_blacklist(&self, cipher: &str, shim: &str) -> bool {
+        if let Some(ref list) = self.map {
             if let Some(l) = list.get(cipher) {
-                for s in l {
-                    if shim.contains(s) {
+                for s in l.blacklist.clone() {
+                    if shim.contains(&s) {
                         return true;
                     }
                 }
             }
         }
         return false;
+    }
+
+    pub fn name_to_ossl(&self, cipher: &str) -> String {
+        if let Some(ref list) = self.map {
+            if let Some(l) = list.get(cipher) {
+                return l.ossl_name.clone()
+            }
+        }
+        return String::from("");
     }
 }

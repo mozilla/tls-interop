@@ -18,13 +18,13 @@ mod flatten;
 mod test_result;
 mod tests;
 use agent::Agent;
-use config::{CipherBlacklist, TestCase, TestCaseParams, TestCases};
+use config::{CipherMap, TestCase, TestCaseParams, TestCases};
 use flatten::flatten;
 use test_result::TestResult;
 
 const CLIENT: Token = mio::Token(0);
 const SERVER: Token = mio::Token(1);
-const BLACKLIST_FILE: &str = "cipher_blacklist.json";
+const CIPHER_MAP_FILE: &str = "cipher_map.json";
 
 fn copy_data(poll: &Poll, from: &mut Agent, to: &mut Agent) {
     let mut buf: [u8; 16384] = [0; 16384];
@@ -96,7 +96,7 @@ pub struct TestConfig {
     rootdir: String,
     client_writes_first: bool,
     force_ipv4: bool,
-    blacklist: CipherBlacklist,
+    cipher_map: CipherMap,
 }
 
 // The results of the entire test run.
@@ -155,8 +155,6 @@ impl Results {
             (TestResult::Skipped, _, _) => self.skipped += 1,
             (TestResult::Failed, client, server) => {
                 println!("\nFAILED: {}\n", Results::case_name(case, index));
-                //Stdout would also be available for printing at this point, in case it turns out
-                //to be informative, which was never the case so far.
                 match client {
                     Some(c) => {
                         println!(
@@ -189,9 +187,11 @@ impl Results {
     }
 }
 
-// This is not yet designed to handle combinations of different parameters.
-// Combining more than one set of parameters, e.g. versions and ciphers, might
-// result in combinatorial explosion, as intended. But that's not guaranteed.
+// This function currently does not perform combinatorial explosion between
+// different types of arguments, like versions and ciphers, for a single agent but
+// processes them consecutively.
+// Combinatorial explosion will only happen in test_case_meta() between the separate
+// sets of server_args, client_args, and shared_args.
 fn make_params(params: &Option<TestCaseParams>) -> Vec<Vec<String>> {
     let mut mat = vec![];
 
@@ -278,11 +278,8 @@ fn run_test_case_inner(
     // Create the server and client args
     let mut server_args = extra_server_args.clone();
     let mut client_args = extra_client_args.clone();
-
-    for arg in extra_shared_args {
-        server_args.push(arg.clone());
-        client_args.push(arg.clone());
-    }
+    server_args.append(&mut extra_shared_args.clone());
+    client_args.append(&mut extra_shared_args.clone());
 
     server_args.push(String::from("-server"));
     let key_base = match case.server_key {
@@ -310,7 +307,7 @@ fn run_test_case_inner(
         "server",
         &config.server_shim,
         &case.server,
-        &config.blacklist,
+        &config.cipher_map,
         server_args,
         config.force_ipv4,
     ) {
@@ -324,7 +321,7 @@ fn run_test_case_inner(
         "client",
         &config.client_shim,
         &case.client,
-        &config.blacklist,
+        &config.cipher_map,
         client_args,
         config.force_ipv4,
     ) {
@@ -389,8 +386,8 @@ fn main() {
         )
         .get_matches();
 
-    let mut bl = CipherBlacklist::new();
-    bl.init(BLACKLIST_FILE);
+    let mut map = CipherMap::new();
+    map.init(CIPHER_MAP_FILE);
 
     let config = TestConfig {
         client_shim: String::from(matches.value_of("client").unwrap()),
@@ -398,7 +395,7 @@ fn main() {
         rootdir: String::from(matches.value_of("rootdir").unwrap()),
         client_writes_first: matches.is_present("client-writes-first"),
         force_ipv4: matches.is_present("force-IPv4"),
-        blacklist: bl,
+        cipher_map: map,
     };
 
     let mut f = fs::File::open(matches.value_of("cases").unwrap()).unwrap();
