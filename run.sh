@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-BASE_DIR=$(cd $(dirname $0); pwd -P)
+BASE_DIR="$(cd "$(dirname "$0")"; pwd -P)"
 CASE_FILE="cases.json"
 MODE=""
 
@@ -11,7 +11,7 @@ print_help() {
 }
 
 while [ $# -gt 0 ]; do
-    case $1 in
+    case "$1" in
         -v) export RUST_LOG=debug ;;
         -m) MODE="$2"; shift ;;
         -c) CASE_FILE="$2"; shift;;
