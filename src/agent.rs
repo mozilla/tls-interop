@@ -9,9 +9,11 @@ use mio_extras::channel;
 use mio_extras::channel::Receiver;
 use std::process::{Command, ExitStatus, Output, Stdio};
 use std::thread;
+use std::time::Duration;
 
 const SERVER: Token = mio::Token(1);
 const STATUS: Token = mio::Token(2);
+const ERR_CIPHER_BLACKLISTED: i32 = 89;
 
 #[allow(dead_code)]
 pub struct Agent {
@@ -24,19 +26,12 @@ pub struct Agent {
     exit_value: Option<ExitStatus>,
 }
 
-fn cipher_string_to_ossl(input: &str) -> String {
-    String::from(input)
-        .replace("TLS_", "")
-        .replace("AES_", "AES")
-        .replace("_", "-")
-        .replace("-WITH", "")
-}
-
 impl Agent {
     pub fn new(
         name: &str,
         path: &str,
         agent: &Option<TestCaseAgent>,
+        cipher_map: &CipherMap,
         args: Vec<String>,
         ipv4: bool,
     ) -> Result<Agent, i32> {
@@ -65,13 +60,16 @@ impl Agent {
                 command.arg(min.to_string());
             }
             if let Some(ref cipher) = a.cipher {
+                if cipher_map.check_blacklist(cipher, path) {
+                    return Err(ERR_CIPHER_BLACKLISTED);
+                }
                 match ossl_cipher_format {
-                    true => command.arg("-cipher"),
-                    false => command.arg("-nss-cipher"),
-                };
-                match ossl_cipher_format {
-                    true => command.arg(cipher_string_to_ossl(&cipher.to_string())),
-                    false => command.arg(cipher.to_string()),
+                    true => command.arg("-cipher").arg(
+                        cipher_map.name_to_ossl(cipher)
+                    ),
+                    false => command.arg("-nss-cipher").arg(
+                        cipher
+                    ),
                 };
             }
             if let Some(ref flags) = a.flags {
@@ -82,7 +80,31 @@ impl Agent {
         }
 
         // Add specific args.
-        for arg in &args {
+        // Modify cipher arguments to match the format required by the different shims.
+        let mut cipher_arg = false;
+        for a in &args {
+            let mut arg = a.clone();
+            if cipher_arg {
+                if cipher_map.check_blacklist(&arg, path) {
+                    return Err(ERR_CIPHER_BLACKLISTED);
+                }
+                match ossl_cipher_format {
+                    true => command.arg(
+                        cipher_map.name_to_ossl(&arg),
+                    ),
+                    false => command.arg(
+                        arg
+                    ),
+                };
+                cipher_arg = false;
+                continue;
+            }
+            if arg.contains("-cipher") {
+                if !ossl_cipher_format {
+                    arg.insert_str(0, "-nss")
+                }
+                cipher_arg = true;
+            }
             command.arg(arg);
         }
 
@@ -157,9 +179,19 @@ impl Agent {
         poll.register(&self.child, STATUS, Ready::readable(), PollOpt::level())
             .unwrap();
         let mut events = Events::with_capacity(1);
-        poll.poll(&mut events, None).unwrap();
-
-        let output = self.child.try_recv().unwrap();
+        // poll() used to cause indefinite blocking of the main thread in rare cases, and,
+        // consequently, intermittent timeouts of the whole test suite. It is now set to time out
+        // and stop blocking after 30 seconds.
+        // The output of the subthread should always be readable on the channel by that time. It
+        // seems that poll() missed the event if it was registered after the arrival of the output.
+        // There's currently no proof this fixes the issue, but no timeouts have been observed
+        // since the change was implemented.
+        poll.poll(&mut events, Some(Duration::new(30, 0))).unwrap();
+        debug!("Poll successful or timed out. Trying to receive output...");
+        let output = self
+            .child
+            .try_recv()
+            .expect("Failed to receive output from subthread.");
         let code = output.status.code().unwrap_or(-1);
         debug!("Exit status for {} = {}", self.name, code);
         output.clone()

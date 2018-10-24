@@ -18,12 +18,13 @@ mod flatten;
 mod test_result;
 mod tests;
 use agent::Agent;
-use config::{TestCase, TestCaseParams, TestCases};
+use config::{CipherMap, TestCase, TestCaseParams, TestCases};
 use flatten::flatten;
 use test_result::TestResult;
 
 const CLIENT: Token = mio::Token(0);
 const SERVER: Token = mio::Token(1);
+const CIPHER_MAP_FILE: &str = "cipher_map.json";
 
 fn copy_data(poll: &Poll, from: &mut Agent, to: &mut Agent) {
     let mut buf: [u8; 16384] = [0; 16384];
@@ -95,6 +96,7 @@ pub struct TestConfig {
     rootdir: String,
     client_writes_first: bool,
     force_ipv4: bool,
+    cipher_map: CipherMap,
 }
 
 // The results of the entire test run.
@@ -153,19 +155,29 @@ impl Results {
             (TestResult::Skipped, _, _) => self.skipped += 1,
             (TestResult::Failed, client, server) => {
                 println!("\nFAILED: {}\n", Results::case_name(case, index));
-                //Stdout would also be available for printing at this point, in case it turns out
-                //to be informative, which was never the case so far.
                 match client {
                     Some(c) => {
-                        println!("Client stderr: \n{}", String::from_utf8(c.stderr.clone()).unwrap());
-                        println!("Client stdout: \n{}", String::from_utf8(c.stdout.clone()).unwrap())
+                        println!(
+                            "Client stderr: \n{}",
+                            String::from_utf8(c.stderr.clone()).unwrap()
+                        );
+                        println!(
+                            "Client stdout: \n{}",
+                            String::from_utf8(c.stdout.clone()).unwrap()
+                        )
                     }
                     None => {}
                 };
                 match server {
                     Some(s) => {
-                        println!("Server stderr: \n{}", String::from_utf8(s.stderr.clone()).unwrap());
-                        println!("Server stdout: \n{}", String::from_utf8(s.stdout.clone()).unwrap())
+                        println!(
+                            "Server stderr: \n{}",
+                            String::from_utf8(s.stderr.clone()).unwrap()
+                        );
+                        println!(
+                            "Server stdout: \n{}",
+                            String::from_utf8(s.stdout.clone()).unwrap()
+                        )
                     }
                     None => {}
                 };
@@ -175,6 +187,11 @@ impl Results {
     }
 }
 
+// This function currently does not perform combinatorial explosion between
+// different types of arguments, like versions and ciphers, for a single agent but
+// processes them consecutively.
+// Combinatorial explosion will only happen in test_case_meta() between the separate
+// sets of server_args, client_args, and shared_args.
 fn make_params(params: &Option<TestCaseParams>) -> Vec<Vec<String>> {
     let mut mat = vec![];
 
@@ -193,24 +210,40 @@ fn make_params(params: &Option<TestCaseParams>) -> Vec<Vec<String>> {
             }
             mat.push(alist)
         }
+        if let Some(ref ciphers) = p.ciphers {
+            let mut alist = vec![];
+            for ciph in ciphers {
+                let mut args = vec![];
+
+                args.push(String::from("-cipher"));
+                args.push(ciph.to_string());
+
+                alist.push(args);
+            }
+            mat.push(alist)
+        }
     }
 
     flatten(&mat)
 }
 
 fn run_test_case_meta(results: &mut Results, config: &TestConfig, case: &TestCase) {
-    if case.client_params.is_none() && case.server_params.is_none() {
+    if case.client_params.is_none() && case.server_params.is_none() && case.shared_params.is_none()
+    {
         let dummy = vec![];
-        run_test_case(results, config, case, None, &dummy, &dummy);
+        run_test_case(results, config, case, None, &dummy, &dummy, &dummy);
     } else {
         let client_args = make_params(&case.client_params);
         let server_args = make_params(&case.server_params);
+        let shared_args = make_params(&case.shared_params);
         let mut index: u32 = 0;
 
         for c in &client_args {
             for s in &server_args {
-                run_test_case(results, config, case, Some(index), c, s);
-                index += 1;
+                for sh in &shared_args {
+                    run_test_case(results, config, case, Some(index), c, s, sh);
+                    index += 1;
+                }
             }
         }
     }
@@ -223,8 +256,15 @@ fn run_test_case(
     index: Option<u32>,
     extra_client_args: &Vec<String>,
     extra_server_args: &Vec<String>,
+    extra_shared_args: &Vec<String>,
 ) {
-    let res = run_test_case_inner(config, case, extra_client_args, extra_server_args);
+    let res = run_test_case_inner(
+        config,
+        case,
+        extra_client_args,
+        extra_server_args,
+        extra_shared_args,
+    );
     results.update(case, index, res);
 }
 
@@ -233,10 +273,13 @@ fn run_test_case_inner(
     case: &TestCase,
     extra_client_args: &Vec<String>,
     extra_server_args: &Vec<String>,
+    extra_shared_args: &Vec<String>,
 ) -> Result<(std::process::Output, std::process::Output), i32> {
     // Create the server and client args
     let mut server_args = extra_server_args.clone();
     let mut client_args = extra_client_args.clone();
+    server_args.append(&mut extra_shared_args.clone());
+    client_args.append(&mut extra_shared_args.clone());
 
     server_args.push(String::from("-server"));
     let key_base = match case.server_key {
@@ -264,6 +307,7 @@ fn run_test_case_inner(
         "server",
         &config.server_shim,
         &case.server,
+        &config.cipher_map,
         server_args,
         config.force_ipv4,
     ) {
@@ -277,6 +321,7 @@ fn run_test_case_inner(
         "client",
         &config.client_shim,
         &case.client,
+        &config.cipher_map,
         client_args,
         config.force_ipv4,
     ) {
@@ -341,12 +386,16 @@ fn main() {
         )
         .get_matches();
 
+    let mut map = CipherMap::new();
+    map.init(CIPHER_MAP_FILE);
+
     let config = TestConfig {
         client_shim: String::from(matches.value_of("client").unwrap()),
         server_shim: String::from(matches.value_of("server").unwrap()),
         rootdir: String::from(matches.value_of("rootdir").unwrap()),
         client_writes_first: matches.is_present("client-writes-first"),
         force_ipv4: matches.is_present("force-IPv4"),
+        cipher_map: map,
     };
 
     let mut f = fs::File::open(matches.value_of("cases").unwrap()).unwrap();

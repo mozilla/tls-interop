@@ -1,0 +1,429 @@
+{
+  "map" : {
+    "TLS_AES_128_GCM_SHA256" : {
+      "comment" : "",
+      "ossl_name" : "AES128-GCM-SHA256",
+      "blacklist" : []
+    },
+
+    "TLS_CHACHA20_POLY1305_SHA256" : {
+      "comment" : "Fails with bssl_shim for unknown reason.",
+      "ossl_name" : "CHACHA20-POLY1305-SHA256",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_AES_256_GCM_SHA384" : {
+      "comment" : "",
+      "ossl_name" : "AES256-GCM-SHA384",
+      "blacklist" : []
+    },
+
+    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256" : {
+      "comment" : "",
+      "ossl_name" : "ECDHE-ECDSA-AES128-GCM-SHA256",
+      "blacklist" : []
+    },
+
+    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" : {
+      "comment" : "",
+      "ossl_name" : "ECDHE-RSA-AES128-GCM-SHA256",
+      "blacklist" : []
+    },
+
+    "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256" : {
+      "comment" : "",
+      "ossl_name" : "ECDHE-ECDSA-CHACHA20-POLY1305",
+      "blacklist" : []
+    },
+
+    "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256" : {
+      "comment" : "",
+      "ossl_name" : "ECDHE-RSA-CHACHA20-POLY1305",
+      "blacklist" : []
+    },
+
+    "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384" : {
+      "comment" : "",
+      "ossl_name" : "ECDHE-ECDSA-AES256-GCM-SHA384",
+      "blacklist" : []
+    },
+
+    "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384" : {
+      "comment" : "",
+      "ossl_name" : "ECDHE-RSA-AES256-GCM-SHA384",
+      "blacklist" : []
+    },
+
+    "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA" : {
+      "comment" : "",
+      "ossl_name" : "ECDHE-ECDSA-AES256-SHA",
+      "blacklist" : []
+    },
+
+    "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA;" : {
+      "comment" : "",
+      "ossl_name" : "AES256-GCM-SHA384",
+      "blacklist" : []
+    },
+
+    "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA" : {
+      "comment" : "",
+      "ossl_name" : "ECDHE-RSA-AES128-SHA",
+      "blacklist" : []
+    },
+
+    "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "ECDHE-ECDSA-AES128-SHA256",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "ECDHE-RSA-AES128-SHA256",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA" : {
+      "comment" : "",
+      "ossl_name" : "ECDHE-RSA-AES256-SHA",
+      "blacklist" : []
+    },
+
+    "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "ECDHE-ECDSA-AES256-SHA384",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "ECDHE-RSA-AES256-SHA384",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with ossl_shim for unknown reason",
+      "ossl_name" : "ECDHE-ECDSA-DES-CBC3-SHA",
+      "blacklist" : ["bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with ossl_shim for unknown reason",
+      "ossl_name" : "ECDHE-RSA-DES-CBC3-SHA",
+      "blacklist" : ["bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with ossl_shim for unknown reason",
+      "ossl_name" : "ECDHE-ECDSA-RC4-SHA",
+      "blacklist" : ["bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_ECDHE_RSA_WITH_RC4_128_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with ossl_shim for unknown reason",
+      "ossl_name" : "ECDHE-RSA-RC4-SHA",
+      "blacklist" : ["bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "DHE-RSA-AES128-GCM-SHA256",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "DHE-RSA-CHACHA20-POLY1305",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_DHE_DSS_WITH_AES_128_GCM_SHA256" : {
+      "comment" : "Not supported by BoringSSL. Is refused by nss_bogo_shim for missing appropriate certificate.",
+      "ossl_name" : "DHE-DSS-AES128-GCM-SHA256",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "DHE-RSA-AES256-GCM-SHA384",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_DHE_DSS_WITH_AES_256_GCM_SHA384" : {
+      "comment" : "Not supported by BoringSSL. Is refused by nss_bogo_shim for missing appropriate certificate.",
+      "ossl_name" : "DHE-DSS-AES256-GCM-SHA384",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_DHE_RSA_WITH_AES_128_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "DHE-RSA-AES128-SHA",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_DHE_DSS_WITH_AES_128_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Is refused by nss_bogo_shim for missing appropriate certificate.",
+      "ossl_name" : "DHE-DSS-AES128-SHA",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_DHE_RSA_WITH_AES_128_CBC_SHA256" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "DHE-RSA-AES128-SHA256",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_DHE_DSS_WITH_AES_128_CBC_SHA256" : {
+      "comment" : "Not supported by BoringSSL. Is refused by nss_bogo_shim for missing appropriate certificate.",
+      "ossl_name" : "DHE-DSS-AES128-SHA256",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "DHE-RSA-CAMELLIA128-SHA",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_DHE_DSS_WITH_CAMELLIA_128_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Is refused by nss_bogo_shim for missing appropriate certificate.",
+      "ossl_name" : "DHE-DSS-CAMELLIA128-SHA",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_DHE_RSA_WITH_AES_256_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "DHE-RSA-AES256-SHA",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_DHE_DSS_WITH_AES_256_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Is refused by nss_bogo_shim for missing appropriate certificate.",
+      "ossl_name" : "DHE-DSS-AES256-SHA",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_DHE_RSA_WITH_AES_256_CBC_SHA256" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "DHE-RSA-AES256-SHA256",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_DHE_DSS_WITH_AES_256_CBC_SHA256" : {
+      "comment" : "Not supported by BoringSSL. Is refused by nss_bogo_shim for missing appropriate certificate.",
+      "ossl_name" : "DHE-DSS-AES256-SHA256",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "DHE-RSA-CAMELLIA256-SHA",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_DHE_DSS_WITH_CAMELLIA_256_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Is refused by nss_bogo_shim for missing appropriate certificate.",
+      "ossl_name" : "DHE-DSS-CAMELLIA256-SHA",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with ossl_shim for unknown reason",
+      "ossl_name" : "DHE-RSA-DES-CBC3-SHA",
+      "blacklist" : ["bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Is refused by nss_bogo_shim for missing appropriate certificate.",
+      "ossl_name" : "DHE-DSS-DES-CBC3-SHA",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_DHE_DSS_WITH_RC4_128_SHA" : {
+      "comment" : "Not supported by BoringSSL. Is refused by nss_bogo_shim for missing appropriate certificate.",
+      "ossl_name" : "DHE-DSS-RC4-SHA",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with ossl_shim for unknown reason",
+      "ossl_name" : "ECDH-ECDSA-AES128-SHA",
+      "blacklist" : ["bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with nss_bogo_shim for unknown reason",
+      "ossl_name" : "ECDH-RSA-AES128-SHA",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with ossl_shim for unknown reason",
+      "ossl_name" : "ECDH-ECDSA-AES256-SHA",
+      "blacklist" : ["bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_ECDH_RSA_WITH_AES_256_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with nss_bogo_shim for unknown reason",
+      "ossl_name" : "ECDH-RSA-AES256-SHA",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with ossl_shim for unknown reason",
+      "ossl_name" : "ECDH-ECDSA-DES-CBC3-SHA",
+      "blacklist" : ["bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with nss_bogo_shim for unknown reason",
+      "ossl_name" : "ECDH-RSA-DES-CBC3-SHA",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_ECDH_ECDSA_WITH_RC4_128_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with ossl_shim for unknown reason",
+      "ossl_name" : "ECDH-ECDSA-RC4-SHA",
+      "blacklist" : ["bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_ECDH_RSA_WITH_RC4_128_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with nss_bogo_shim for unknown reason",
+      "ossl_name" : "ECDH-RSA-RC4-SHA",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_RSA_WITH_AES_128_GCM_SHA256" : {
+      "comment" : "",
+      "ossl_name" : "AES128-GCM-SHA256",
+      "blacklist" : []
+    },
+
+    "TLS_RSA_WITH_AES_256_GCM_SHA384" : {
+      "comment" : "",
+      "ossl_name" : "AES256-GCM-SHA384",
+      "blacklist" : []
+    },
+
+    "TLS_RSA_WITH_AES_128_CBC_SHA" : {
+      "comment" : "",
+      "ossl_name" : "AES128-SHA",
+      "blacklist" : []
+    },
+
+    "TLS_RSA_WITH_AES_128_CBC_SHA256" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "AES128-SHA256",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_RSA_WITH_CAMELLIA_128_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "CAMELLIA128-SHA",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_RSA_WITH_AES_256_CBC_SHA" : {
+      "comment" : "",
+      "ossl_name" : "AES256-SHA",
+      "blacklist" : []
+    },
+
+    "TLS_RSA_WITH_AES_256_CBC_SHA256" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "AES256-SHA256",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_RSA_WITH_CAMELLIA_256_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "CAMELLIA256-SHA",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_RSA_WITH_SEED_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "SEED-SHA",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_RSA_WITH_3DES_EDE_CBC_SHA" : {
+      "comment" : "Fails with ossl_shim for unknown reason",
+      "ossl_name" : "DES-CBC3-SHA",
+      "blacklist" : ["ossl_shim"]
+    },
+
+    "TLS_RSA_WITH_RC4_128_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with ossl_shim for unknown reason",
+      "ossl_name" : "RC4-SHA",
+      "blacklist" : ["bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_RSA_WITH_RC4_128_MD5" : {
+      "comment" : "Not supported by BoringSSL. Fails with ossl_shim for unknown reason",
+      "ossl_name" : "RC4-MD5",
+      "blacklist" : ["bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_DHE_RSA_WITH_DES_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Not supported by OpenSSL.",
+      "ossl_name" : "NONE",
+      "blacklist" : ["bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_DHE_DSS_WITH_DES_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Is refused by nss_bogo_shim for missing appropriate certificate. Not supported by OpenSSL.",
+      "ossl_name" : "NONE",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_RSA_WITH_DES_CBC_SHA" : {
+      "comment" : "Not supported by BoringSSL. Not supported by OpenSSL.",
+      "ossl_name" : "NONE",
+      "blacklist" : ["bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_ECDHE_ECDSA_WITH_NULL_SHA" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "ECDHE-ECDSA-NULL-SHA",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_ECDHE_RSA_WITH_NULL_SHA" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "ECDHE-RSA-NULL-SHA",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_ECDH_RSA_WITH_NULL_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with nss_bogo_shim for unknown reason",
+      "ossl_name" : "ECDH-RSA-NULL-SHA",
+      "blacklist" : ["nss_bogo_shim", "bssl_shim"]
+    },
+
+    "TLS_ECDH_ECDSA_WITH_NULL_SHA" : {
+      "comment" : "Not supported by BoringSSL. Fails with ossl_shim for unknown reason",
+      "ossl_name" : "ECDH-ECDSA-NULL-SHA",
+      "blacklist" : ["bssl_shim", "ossl_shim"]
+    },
+
+    "TLS_RSA_WITH_NULL_SHA" : {
+      "comment" : "",
+      "ossl_name" : "NULL-SHA",
+      "blacklist" : []
+    },
+
+    "TLS_RSA_WITH_NULL_SHA256" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "NULL-SHA256",
+      "blacklist" : ["bssl_shim"]
+    },
+
+    "TLS_RSA_WITH_NULL_MD5" : {
+      "comment" : "Not supported by BoringSSL.",
+      "ossl_name" : "NULL-MD5",
+      "blacklist" : ["bssl_shim"]
+    }
+  }
+}

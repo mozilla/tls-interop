@@ -1,69 +1,69 @@
 #!/usr/bin/env bash
-BASE_DIR=$(cd $(dirname $0); pwd -P)
-CASE_FILE=$2
-#export RUST_LOG=debug
+BASE_DIR="$(cd "$(dirname "$0")"; pwd -P)"
+CASE_FILE="cases.json"
+MODE=""
 
-run_boring_server() {
-  cargo run -- \
-  --client $BASE_DIR/../dist/Debug/bin/nss_bogo_shim \
-  --server $BASE_DIR/../boringssl/build/ssl/test/bssl_shim \
-  --rootdir $BASE_DIR/../boringssl/ssl/test/runner/ \
-  --test-cases $BASE_DIR/$CASE_FILE \
-  --client-writes-first
+print_help() {
+  printf "Usage: -m <mode> [-c <case_file>] [-v]\n\n \
+    -v      Verbose output.\n \
+    -m      test mode. ( all | loopback | ossl_server | ossl_client | bssl_server | bssl_shim ) \n \
+    -c      case file. Default is: cases.json\n"
 }
 
-run_boring_client() {
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -v) export RUST_LOG=debug ;;
+        -m) MODE="$2"; shift ;;
+        -c) CASE_FILE="$2"; shift;;
+        *) print_help; exit 2 ;;
+    esac
+    shift
+done
+
+CERT_DIR="$BASE_DIR/../boringssl/ssl/test/runner/"
+declare -A shims=([nss]="$BASE_DIR/../dist/Debug/bin/nss_bogo_shim" \
+                  [bssl]="$BASE_DIR/../boringssl/build/ssl/test/bssl_shim" \
+                  [ossl]="$BASE_DIR/../openssl/test/ossl_shim/ossl_shim")
+
+run_shim_pair() {
+  SHIM1="$1"
+  SHIM2="$2"
+
+  args=()
+
+  # If NSS acts as the client, interop needs this argument.
+  # It would become obsolete if bssl and ossl could actively initiate
+  # communication after the handshake.
+  if [[ $SHIM1 = "nss" ]]; then
+    args+=(--client-writes-first)
+  fi
+
+  # The ossl_shim is currently not properly IPv6 capable, which is why interop
+  # needs this argument when ossl_shim is involved in the test case.
+  if [[ $SHIM1 == "ossl" ]] || [[ $SHIM2 == "ossl" ]] ; then
+    args+=(--force-IPv4)
+  fi
+
   cargo run -- \
-  --client $BASE_DIR/../boringssl/build/ssl/test/bssl_shim \
-  --server $BASE_DIR/../dist/Debug/bin/nss_bogo_shim \
-  --rootdir $BASE_DIR/../boringssl/ssl/test/runner/ \
-  --test-cases $BASE_DIR/$CASE_FILE
+  --client "${shims[$SHIM1]}" \
+  --server "${shims[$SHIM2]}" \
+  --rootdir "$CERT_DIR" \
+  --test-cases "$BASE_DIR/$CASE_FILE" \
+  ${args[@]}
 }
 
-run_ossl_server() {
-  cargo run -- \
-  --client $BASE_DIR/../dist/Debug/bin/nss_bogo_shim \
-  --server $BASE_DIR/../openssl/test/ossl_shim/ossl_shim \
-  --rootdir $BASE_DIR/../boringssl/ssl/test/runner/ \
-  --test-cases $BASE_DIR/$CASE_FILE \
-  --client-writes-first \
-  --force-IPv4
+run_mode() {
+  if [[ "$1" == "$2" ]] || [[ "$1" == "all" ]]; then
+    run_shim_pair "$3" "$4"
+    invalid_mode=
+  fi
 }
 
-run_ossl_client() {
-  cargo run -- \
-  --client $BASE_DIR/../openssl/test/ossl_shim/ossl_shim \
-  --server $BASE_DIR/../dist/Debug/bin/nss_bogo_shim \
-  --rootdir $BASE_DIR/../boringssl/ssl/test/runner/ \
-  --test-cases $BASE_DIR/$CASE_FILE \
-  --force-IPv4
-}
+invalid_mode=true
+run_mode "$MODE" bssl_server "nss" "bssl"
+run_mode "$MODE" bssl_client "bssl" "nss"
+run_mode "$MODE" ossl_server "nss" "ossl"
+run_mode "$MODE" ossl_client "ossl" "nss"
+run_mode "$MODE" loopback "nss" "nss"
 
-run_loopback() {
-  cargo run -- \
-  --client $BASE_DIR/../dist/Debug/bin/nss_bogo_shim \
-  --server $BASE_DIR/../dist/Debug/bin/nss_bogo_shim \
-  --rootdir $BASE_DIR/../boringssl/ssl/test/runner/ \
-  --test-cases $BASE_DIR/$CASE_FILE
-}
-
-case "$1" in
-  "boring_server")
-      run_boring_server
-      ;;
-  "boring_client")
-      run_boring_client
-      ;;
-  "ossl_server")
-      run_ossl_server
-      ;;
-  "ossl_client")
-      run_ossl_client
-      ;;
-  "loopback")
-      run_loopback
-      ;;
-  *)
-    echo "command not found"
-    ;;
-esac
+[[ -z "$invalid_mode" ]] || print_help
